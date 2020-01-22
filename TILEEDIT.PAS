@@ -104,7 +104,9 @@ begin
       putBar(x+i*3,y+j*3,3,3,drawColor);
       if (color = drawColor) then
       begin
-        putRectangle(x+i*3,y+j*3,3,3,15);
+        putHLine(x+i*3,y+j*3,3,15);
+        putVLine(x+i*3,y+j*3,3,15);
+        (*putRectangle(x+i*3,y+j*3,3,3,15);*)
       end;
       inc(drawColor)
     end;
@@ -131,39 +133,78 @@ begin
   blockwrite(f,tileData^,1);
   close(f);
 end;
+function byteToHex(value : byte) : string;
+const
+ hexChars: array [0..$F] of Char =
+   '0123456789ABCDEF';
+var tmp : string;
+begin
+  tmp := hexChars[value shr 4];
+  tmp := tmp + hexChars[value and $F];
+  byteToHex := tmp;
+end;
 procedure savePalette;
-var f : file;
-    palette : array[0..255*3] of byte;
+var f : Text;
     i,r,g,b : byte;
 begin
+  assign(f,'default.pal');
+  rewrite(f);
   for i := 0 to 255 do
   begin
     getPalette(i,r,g,b);
-    palette[i*3] := r;
-    palette[i*3+1] := g;
-    palette[i*3+2] := b;
+    writeln(f,'#', byteToHex(r*4), byteToHex(g*4), byteToHex(b*4));
   end;
-  assign(f,'default.pal');
-  rewrite(f,256*3);
-  blockwrite(f,palette,1);
   close(f);
 end;
+function hexToByte(hex : char) : byte;
+begin
+  hex := upCase(hex);
+  case hex of
+  '0': hexToByte := 0;
+  '1': hexToByte := 1;
+  '2': hexToByte := 2;
+  '3': hexToByte := 3;
+  '4': hexToByte := 4;
+  '5': hexToByte := 5;
+  '6': hexToByte := 6;
+  '7': hexToByte := 7;
+  '8': hexToByte := 8;
+  '9': hexToByte := 9;
+  'A': hexToByte := 10;
+  'B': hexToByte := 11;
+  'C': hexToByte := 12;
+  'D': hexToByte := 13;
+  'E': hexToByte := 14;
+  'F': hexToByte := 15;
+  end;
+end;
 procedure loadPalette;
-var f : file;
-    palette : array[0..255*3] of byte;
+var f : Text;
+    s : string;
     i,r,g,b : byte;
 begin
   assign(f,'default.pal');
-  reset(f,256*3);
-  blockread(f,palette,1);
-  close(f);
-  for i := 0 to 255 do
+  reset(f);
+  i := 0;
+  while not eof(f) do
   begin
-    r := palette[i*3];
-    g := palette[i*3+1];
-    b := palette[i*3+2];
-    setPalette(i,r,g,b);
+    readln(f,s);
+    if (pos('#',s) = 1) and (Length(s) = 7) then
+    begin
+      r :=  hexToByte(s[2]) shl 4;
+      r := r + hexToByte(s[3]);
+      g :=  hexToByte(s[4]) shl 4;
+      g := g + hexToByte(s[5]);
+      b :=  hexToByte(s[6]) shl 4;
+      b := b + hexToByte(s[7]);
+      r := r shr 2;
+      g := g shr 2;
+      b := b shr 2;
+      setPalette(i,r,g,b);
+      i := i +1;
+    end;
   end;
+  close(f);
 end;
 
 procedure mainLoop;
@@ -269,7 +310,7 @@ begin
                for i := 0 to 8 do
                begin
                  tileData^[index*100+j*10+i] :=
-                                             tileData^[tagged*100+j*10+i+1];
+                                             tileData^[index*100+j*10+i+1];
                end;
                tileData^[index*100+j*10+9] := tmp;
              end;
@@ -282,7 +323,7 @@ begin
                for i := 9 downto 1 do
                begin
                  tileData^[index*100+j*10+i] :=
-                                             tileData^[tagged*100+j*10+i-1];
+                                             tileData^[index*100+j*10+i-1];
                end;
                tileData^[index*100+j*10] := tmp;
              end;
@@ -295,7 +336,7 @@ begin
                for j := 0 to 8 do
                begin
                  tileData^[index*100+j*10+i] :=
-                                             tileData^[tagged*100+j*10+i+10];
+                                             tileData^[index*100+j*10+i+10];
                end;
                tileData^[index*100+9*10+i] := tmp;
              end;
@@ -308,7 +349,7 @@ begin
                for j := 9 downto 1 do
                begin
                  tileData^[index*100+j*10+i] :=
-                                             tileData^[tagged*100+j*10+i-10];
+                                             tileData^[index*100+j*10+i-10];
                end;
                tileData^[index*100+i] := tmp;
              end;

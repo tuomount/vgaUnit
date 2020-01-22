@@ -65,21 +65,47 @@ procedure putText(x,y : integer; s : string);
  * @param color Rectangle color
 *)
 procedure putRectangle(x, y, width, height : integer; color : byte);
+(*
+ * Load VGA palette from file.
+ * Each palette value must be on separate row and start #.
+ * Channels are in order red,green and blue. Values are 0-ffh
+ * @param filename Palette filename to load
+*)
+procedure loadVGAPalette(filename : string);
+(*
+ * Loads 256x10x10 tiles to memory.
+ * @param s Filename for tile file.
+*)
+procedure loadTiles(s : string);
+(*
+ * Draw tile to screen.
+ * @param x X Coordinate
+ * @param y Y Coordinate
+ * @param index Tile index
+*)
+procedure drawTile(x,y : integer; index : byte);
 
 implementation
+
+type TileDataArray = array[0..255*10*10] of byte;
+     TileDataPtr = ^TileDataArray;
 
 var textColor : byte;
     textSize : byte;
     textFont : fontDataPtr;
+    tileData : TileDataPtr;
 
 procedure initVGAUI;
 begin
   getmem(systemFont, FONT_MEM_SIZE);
+  getMem(tileData, 256*10*10);
+  fillChar(tileData^, 256*10*10, 0);
   textColor := 15;
   textSize := 11;
 end;
 procedure shutdownVGAUI;
 begin
+  freemem(tileData, 256*10*10);
   freemem(systemFont, FONT_MEM_SIZE);
 end;
 procedure setColor(color : byte);
@@ -110,28 +136,12 @@ begin
   putVLine(x+width-1,y,height,color);
 end;
 
-procedure putCharacter(x,y : integer; index : byte);
-var i,j : integer;
-    offset : byte;
-begin
-  for j := 0 to 7 do
-    for i := 0 to 7 do
-    begin
-      offset := 1;
-      offset := offset shl i;
-      if (textFont^[index*8+j] and offset = offset) then
-      begin
-        putPixel(x+i,y+j,textColor);
-      end
-    end;
-end;
-
 procedure drawCharacter(x,y : integer; index : byte; addr : word);
 var textFontSeg, textFontOff : word;
     color : byte;
 label nextRow, pixel0, pixel1, pixel2, pixel3, pixel4, pixel5, pixel6, pixel7;
 begin
-  if (x > -1) and (y > -1) and (x+8 < VGA_WIDTH) and (y+8 < VGA_HEIGHT) then
+  if (x > -1) and (y > -1) and (x+7 < VGA_WIDTH) and (y+7 < VGA_HEIGHT) then
   begin
     textFontSeg := Seg(textFont^);
     textFontOff := Ofs(textFont^);
@@ -245,6 +255,150 @@ begin
     end;
     inc(i);
   end;
+end;
+
+function hexToByte(hex : char) : byte;
+begin
+  hex := upCase(hex);
+  case hex of
+  '0': hexToByte := 0;
+  '1': hexToByte := 1;
+  '2': hexToByte := 2;
+  '3': hexToByte := 3;
+  '4': hexToByte := 4;
+  '5': hexToByte := 5;
+  '6': hexToByte := 6;
+  '7': hexToByte := 7;
+  '8': hexToByte := 8;
+  '9': hexToByte := 9;
+  'A': hexToByte := 10;
+  'B': hexToByte := 11;
+  'C': hexToByte := 12;
+  'D': hexToByte := 13;
+  'E': hexToByte := 14;
+  'F': hexToByte := 15;
+  end;
+end;
+procedure loadVGAPalette(filename : string);
+var f : Text;
+    s : string;
+    i,r,g,b : byte;
+begin
+  assign(f,filename);
+  reset(f);
+  i := 0;
+  while not eof(f) do
+  begin
+    readln(f,s);
+    if (pos('#',s) = 1) and (Length(s) = 7) then
+    begin
+      r :=  hexToByte(s[2]) shl 4;
+      r := r + hexToByte(s[3]);
+      g :=  hexToByte(s[4]) shl 4;
+      g := g + hexToByte(s[5]);
+      b :=  hexToByte(s[6]) shl 4;
+      b := b + hexToByte(s[7]);
+      r := r shr 2;
+      g := g shr 2;
+      b := b shr 2;
+      setPalette(i,r,g,b);
+      i := i +1;
+    end;
+  end;
+  close(f);
+end;
+procedure loadTiles(s : string);
+var f : file;
+begin
+  assign(f,s);
+  {$I-}
+  reset(f,sizeOf(TileDataArray));
+  {$I+}
+  if IoResult = 0 then
+  begin
+    blockread(f,tileData^,1);
+    close(f);
+  end;
+end;
+procedure putTile(x,y : integer; index : byte; addr : word);
+label startRow, column;
+var tileSeg, tileOff : word;
+begin
+  if (x > -1) and (y > -1) and (x+9 < VGA_WIDTH) and (y+9 < VGA_HEIGHT) then
+  begin
+    tileSeg := Seg(tileData^);
+    tileOff := Ofs(tileData^);
+    asm
+      push es
+      push ds
+      mov  ax,[addr]
+      mov  es,ax
+      mov  bx,[tileSeg]
+      mov  ds,bx
+      (* Calculate pixel position *)
+      mov  dx,[y]
+      mov  bx,dx
+      mov  dh,dl
+      xor  dl,dl
+      shl  bx,6
+      add  dx,bx
+      add  dx,[x]
+      mov  di,dx
+      (* Calculate font offset *)
+      mov  bl,[index]
+      xor  bh,bh
+      shl  bx,6
+      mov  cl,[index]
+      xor  ch,ch
+      shl  cx,5
+      add  bx,cx
+      mov  cl,[index]
+      xor  ch,ch
+      shl  cx,2
+      add  bx,cx
+      shl  bx,3
+      add  bx,[tileOff]
+      mov  si,bx
+      mov  ch,10
+      startRow:
+      mov  cl,5
+      column:
+      mov  ax,ds:[si]
+      mov  es:[di],ax
+      add  si,2
+      add  di,2
+      dec  cl
+      cmp  cl,0
+      jnz  column
+      add  di,310
+      dec  ch
+      cmp  ch,0
+      jnz  startRow
+      pop  ds
+      pop  es
+    end;
+  end;
+end;
+procedure drawTile(x,y : integer; index : byte);
+var i,j : integer;
+    drawColor : byte;
+    addr : word;
+begin
+  if isDoubleBuffer then
+  begin
+    addr := VGA_ADDR2;
+  end
+  else
+  begin
+    addr := VGA_ADDR;
+  end;
+  putTile(x,y,index,addr);
+  (*for j := 0 to 9 do
+    for i := 0 to 9 do
+    begin
+      drawColor := tileData^[index*100+j*10+i];
+      drawPixel(x+i,y+j,drawColor,addr);
+    end;*)
 end;
 
 end.

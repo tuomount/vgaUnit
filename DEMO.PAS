@@ -286,6 +286,39 @@ begin
   readkey;
 end;
 
+procedure tileDemo;
+const TILES = 1000;
+var x : array[1..TILES] of integer;
+    y : array[1..TILES] of integer;
+    index : array[1..TILES] of byte;
+    i : integer;
+begin
+  loadVGAPalette('default.pal');
+  loadTiles('tiles.til');
+  for i := 1 to TILES do
+  begin
+    x[i] := random(300);
+    y[i] := random(189);
+    index[i] := 0;
+  end;
+  repeat
+    readyDraw;
+    clearBuffer(0);
+    for i := 1 to tiles do
+    begin
+      drawTile(x[i],y[i],index[i]);
+      y[i] := y[i] +1;
+      if (y[i] >= 190) then
+      begin
+        x[i] := random(300);
+        y[i] := 0;
+        index[i] := 0;
+      end;
+    end;
+    doneDraw;
+  until keypressed;
+  readkey;
+end;
 begin
   setDoubleBufferMode;
   if (paramCount > 0) then
@@ -308,6 +341,7 @@ begin
   drawVerticalBars;
   barDemo;
   fontDemo;
+  tileDemo;
   shutdownVgaUi;
   initializeTextMode;
   writeln('Back from VGA mode');
