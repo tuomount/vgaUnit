@@ -213,6 +213,7 @@ var ch : char;
     currentValue : byte;
     i,j,tmp : byte;
     s : string;
+    tmpTile : array[0..9,0..9] of byte;
     r,g,b : byte;
 begin
   ch := #0;
@@ -364,6 +365,23 @@ begin
                end;
              end;
              addNewMessage('Tile pasted!');
+           end;
+      'm': begin
+             for j := 0 to 9 do
+             begin
+               for i := 0 to 9 do
+               begin
+                 tmpTile[i,j] := tileData^[index*100+j*10+i];
+               end;
+             end;
+             for j := 0 to 9 do
+             begin
+               for i := 9 downto 0 do
+               begin
+                 tileData^[index*100+j*10+i] := tmpTile[9-i,j];
+               end;
+             end;
+             addNewMessage('Tile mirrored!');
            end;
       'c': begin
              for j := 0 to 9 do

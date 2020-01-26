@@ -344,7 +344,7 @@ begin
       add  dx,bx
       add  dx,[x]
       mov  di,dx
-      (* Calculate font offset *)
+      (* Calculate tile offset *)
       mov  bl,[index]
       xor  bh,bh
       shl  bx,6
@@ -356,7 +356,12 @@ begin
       xor  ch,ch
       shl  cx,2
       add  bx,cx
-      shl  bx,3
+      (*With multiplication*)
+      (*mov  al,[index]
+      xor  ah,ah
+      mov  cx,100
+      mul  cx
+      mov  bx,ax*)
       add  bx,[tileOff]
       mov  si,bx
       mov  ch,10
@@ -393,7 +398,7 @@ begin
     addr := VGA_ADDR;
   end;
   putTile(x,y,index,addr);
-  (*for j := 0 to 9 do
+(*  for j := 0 to 9 do
     for i := 0 to 9 do
     begin
       drawColor := tileData^[index*100+j*10+i];
