@@ -84,6 +84,13 @@ procedure loadTiles(s : string);
  * @param index Tile index
 *)
 procedure drawTile(x,y : integer; index : byte);
+(*
+ * put sprite where color 0 is transparent.
+ * @param x X Coordinate
+ * @param y Y Coordinate
+ * @param index Tile index
+*)
+procedure drawSprite(x,y : integer; index : byte);
 
 implementation
 
@@ -403,6 +410,95 @@ begin
     begin
       drawColor := tileData^[index*100+j*10+i];
       drawPixel(x+i,y+j,drawColor,addr);
+    end;*)
+end;
+procedure putSprite(x,y : integer; index : byte; addr : word);
+label startRow, column, transparent;
+var tileSeg, tileOff : word;
+begin
+  if (x > -1) and (y > -1) and (x+9 < VGA_WIDTH) and (y+9 < VGA_HEIGHT) then
+  begin
+    tileSeg := Seg(tileData^);
+    tileOff := Ofs(tileData^);
+    asm
+      push es
+      push ds
+      mov  ax,[addr]
+      mov  es,ax
+      mov  bx,[tileSeg]
+      mov  ds,bx
+      (* Calculate pixel position *)
+      mov  dx,[y]
+      mov  bx,dx
+      mov  dh,dl
+      xor  dl,dl
+      shl  bx,6
+      add  dx,bx
+      add  dx,[x]
+      mov  di,dx
+      (* Calculate tile offset *)
+      mov  bl,[index]
+      xor  bh,bh
+      shl  bx,6
+      mov  cl,[index]
+      xor  ch,ch
+      shl  cx,5
+      add  bx,cx
+      mov  cl,[index]
+      xor  ch,ch
+      shl  cx,2
+      add  bx,cx
+      (*With multiplication*)
+      (*mov  al,[index]
+      xor  ah,ah
+      mov  cx,100
+      mul  cx
+      mov  bx,ax*)
+      add  bx,[tileOff]
+      mov  si,bx
+      mov  ch,10
+      startRow:
+      mov  cl,10
+      column:
+      mov  al,ds:[si]
+      cmp  al,0
+      je   transparent
+      mov  es:[di],al
+      transparent:
+      add  si,1
+      add  di,1
+      dec  cl
+      cmp  cl,0
+      jnz  column
+      add  di,310
+      dec  ch
+      cmp  ch,0
+      jnz  startRow
+      pop  ds
+      pop  es
+    end;
+  end;
+end;
+procedure drawSprite(x,y : integer; index : byte);
+var i,j : integer;
+    drawColor : byte;
+    addr : word;
+begin
+  if isDoubleBuffer then
+  begin
+    addr := VGA_ADDR2;
+  end
+  else
+  begin
+    addr := VGA_ADDR;
+  end;
+  putSprite(x,y,index,addr);
+(*  for j := 0 to 9 do
+    for i := 0 to 9 do
+    begin
+      drawColor := tileData^[index*100+j*10+i];
+      if (drawColor <> 0) then
+        drawPixel(x+i,y+j,drawColor,addr);
     end;*)
 end;
 
