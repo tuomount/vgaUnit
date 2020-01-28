@@ -33,6 +33,21 @@ procedure setTextSize(size : integer);
 *)
 procedure setFont(ptr : fontDataPtr);
 (*
+ * Set bevel base color
+ * @param color for bevel
+*)
+procedure setBevelColor(color : byte);
+(*
+ * Set bevel light color
+ * @param color for bevel
+*)
+procedure setBevelLightColor(color : byte);
+(*
+ * Set bevel dark color
+ * @param color for bevel
+*)
+procedure setBevelDarkColor(color : byte);
+(*
  * Initialize VGA UI. Reserved memory for all which is required
  * to use VGA UI unit. Assumes that VGA has initialized.
 *)
@@ -101,6 +116,7 @@ var textColor : byte;
     textSize : byte;
     textFont : fontDataPtr;
     tileData : TileDataPtr;
+    bevelColor,bevelLight,bevelDark : byte;
 
 procedure initVGAUI;
 begin
@@ -122,6 +138,18 @@ end;
 procedure setTextSize(size : integer);
 begin
   textSize := size;
+end;
+procedure setBevelColor(color : byte);
+begin
+  bevelColor := color;
+end;
+procedure setBevelLightColor(color : byte);
+begin
+  bevelLight := color;
+end;
+procedure setBevelDarkColor(color : byte);
+begin
+  bevelDark := color;
 end;
 procedure setFont(ptr : fontDataPtr);
 begin

@@ -25,8 +25,10 @@ var
     map : MapTypePtr;
     miniFont : fontDataPtr;
     cyberFont : fontDataPtr;
+    (* Tank Index *)
+    ti : integer;
     base : ^TankType;
-    tank : ^TankType;
+    tank : array[1..2] of ^TankType;
     bullet : ^TankType;
     enemy : array[1..MAX_ENEMY] of ^TankType;
 
@@ -160,9 +162,12 @@ begin
     if (map^.map[x,y] < 4) then
     begin
       map^.map[x,y] := 14;
-      tank^.x := x;
-      tank^.y := y;
-      tank^.taip := TYPE_TANK;
+      tank[1]^.x := x-1;
+      tank[1]^.y := y;
+      tank[1]^.taip := TYPE_TANK;
+      tank[2]^.x := x+1;
+      tank[2]^.y := y;
+      tank[2]^.taip := TYPE_TANK;
       base^.x := x;
       base^.y := y;
       base^.taip := TYPE_BASE;
@@ -229,24 +234,27 @@ begin
     begin
       inc(i);
       drawTile(dx+i*10,dy+j*10,map^.map[cx+x,cy+y]);
-      if (tank^.x = cx+x) and (tank^.y = cy+y) then
+      for k := 1 to 2 do
       begin
-        if (tank^.shot > 0) then
+        if (tank[k]^.x = cx+x) and (tank[k]^.y = cy+y) then
         begin
-          case tank^.dir of
-          DIR_LEFT: drawSprite(dx+i*10,dy+j*10,67);
-          DIR_UP: drawSprite(dx+i*10,dy+j*10,70);
-          DIR_DOWN: drawSprite(dx+i*10,dy+j*10,72);
-          DIR_RIGHT: drawSprite(dx+i*10,dy+j*10,66);
-          end;
-        end
-        else
-        begin
-          case tank^.dir of
-          DIR_LEFT: drawSprite(dx+i*10,dy+j*10,68);
-          DIR_UP: drawSprite(dx+i*10,dy+j*10,69);
-          DIR_DOWN: drawSprite(dx+i*10,dy+j*10,71);
-          DIR_RIGHT: drawSprite(dx+i*10,dy+j*10,65);
+          if (tank[k]^.shot > 0) then
+          begin
+            case tank[k]^.dir of
+            DIR_LEFT: drawSprite(dx+i*10,dy+j*10,67);
+            DIR_UP: drawSprite(dx+i*10,dy+j*10,70);
+            DIR_DOWN: drawSprite(dx+i*10,dy+j*10,72);
+            DIR_RIGHT: drawSprite(dx+i*10,dy+j*10,66);
+            end;
+          end
+          else
+          begin
+            case tank[k]^.dir of
+            DIR_LEFT: drawSprite(dx+i*10,dy+j*10,68);
+            DIR_UP: drawSprite(dx+i*10,dy+j*10,69);
+            DIR_DOWN: drawSprite(dx+i*10,dy+j*10,71);
+            DIR_RIGHT: drawSprite(dx+i*10,dy+j*10,65);
+            end;
           end;
         end;
       end;
@@ -445,19 +453,17 @@ begin
     end;
   end;
 end;
-procedure handleTank;
+procedure handleTank(i : integer);
 begin
-  if (tank^.load > 0) then
+  if (tank[i]^.load > 0) then
   begin
-    dec(tank^.load);
+    dec(tank[i]^.load);
   end;
-  if (tank^.shot > 0) then
+  if (tank[i]^.shot > 0) then
   begin
-    dec(tank^.shot);
-    sound(50+tank^.shot*10);
+    dec(tank[i]^.shot);
+    sound(50+tank[i]^.shot*10);
   end
-  else
-    nosound;
 end;
 procedure handleEnemy(fIndex, tIndex : integer);
 var i,mx,my,move : integer;
@@ -498,8 +504,11 @@ begin
   bullet^.x := -1;
   bullet^.y := -1;
   bullet^.taip := TYPE_BULLET;
-  tank^.dir := random(4);
-  tank^.taip := TYPE_TANK;
+  tank[1]^.dir := random(4);
+  tank[1]^.taip := TYPE_TANK;
+  tank[2]^.dir := random(4);
+  tank[2]^.taip := TYPE_TANK;
+  ti := 1;
   for i := 1 to MAX_ENEMY do
   begin
     enemy[i]^.x := -1;
@@ -530,31 +539,36 @@ begin
       animMap;
       cyclePalette;
       timer := 0;
-      handleTank;
+      handleTank(1);
+      handleTank(2);
+      if (tank[1]^.shot = 0) and (tank[2]^.shot = 0) then
+        nosound;
     end;
     readyDraw;
     clearBuffer(0);
     drawMap(base^.x,base^.y,4,10,10);
-    drawMap(tank^.x,tank^.y,4,110,10);
-    drawMap(tank^.x,tank^.y,4,210,10);
+    drawMap(tank[1]^.x,tank[1]^.y,4,110,10);
+    drawMap(tank[2]^.x,tank[2]^.y,4,210,10);
     doneDraw;
     if (keypressed) then
     begin
       ch := readkey;
       case ch of
-      #72: moveTank(tank^, DIR_UP);
-      #75: moveTank(tank^, DIR_LEFT);
-      #77: moveTank(tank^, DIR_RIGHT);
-      #80: moveTank(tank^, DIR_DOWN);
+      '1': ti := 1;
+      '2': ti := 2;
+      #72: moveTank(tank[ti]^, DIR_UP);
+      #75: moveTank(tank[ti]^, DIR_LEFT);
+      #77: moveTank(tank[ti]^, DIR_RIGHT);
+      #80: moveTank(tank[ti]^, DIR_DOWN);
       ' ': begin
-             if (tank^.load = 0) then
+             if (tank[ti]^.load = 0) then
              begin
                sound(200);
-               tank^.shot := 5;
-               tank^.load := 5;
-               bullet^.x := tank^.x;
-               bullet^.y := tank^.y;
-               bullet^.dir := tank^.dir;
+               tank[ti]^.shot := 5;
+               tank[ti]^.load := 5;
+               bullet^.x := tank[ti]^.x;
+               bullet^.y := tank[ti]^.y;
+               bullet^.dir := tank[ti]^.dir;
                bullet^.shot := 0;
                bullet^.load := 5;
              end;
@@ -568,7 +582,8 @@ procedure reserveMemory;
 var i : integer;
 begin
   getMem(base, sizeOf(TankType));
-  getMem(tank, sizeOf(TankType));
+  getMem(tank[1], sizeOf(TankType));
+  getMem(tank[2], sizeOf(TankType));
   getMem(bullet, sizeOf(TankType));
   for i := 1 to MAX_ENEMY do
     getMem(enemy[i], sizeOf(TankType));
@@ -577,7 +592,8 @@ procedure freeMemory;
 var i : integer;
 begin
   freeMem(base, sizeOf(TankType));
-  freeMem(tank, sizeOf(TankType));
+  freeMem(tank[1], sizeOf(TankType));
+  freeMem(tank[2], sizeOf(TankType));
   freeMem(bullet, sizeOf(TankType));
   for i := 1 to MAX_ENEMY do
     freeMem(enemy[i], sizeOf(TankType));
