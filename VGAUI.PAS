@@ -11,6 +11,10 @@ const
      (* Memory required for loading monochrome font
       * Fonts contain up to 127 characters size of 8x8 *)
      FONT_MEM_SIZE = 1016;
+     (* Bevel where light color is upper left corner. *)
+     BEVEL_UP = 0;
+     (* Bevel where dark color is upper left corner. *)
+     BEVEL_DOWN = 1;
 type
      (* Type definitions for font *)
      fontDataType = array[0..FONT_MEM_SIZE] of byte;
@@ -106,6 +110,24 @@ procedure drawTile(x,y : integer; index : byte);
  * @param index Tile index
 *)
 procedure drawSprite(x,y : integer; index : byte);
+(*
+ * Draw single line border, with bevel colors
+ * @param x X coordinate
+ * @param y Y coordinate
+ * @param width border width
+ * @param height border height
+ * @param bevelTaip values: BEVEL_UP or BEVEL_DOWN
+*)
+procedure drawBorder(x,y,width,height,bevelTaip : integer);
+(*
+ * Draw bevel, with bevel colors
+ * @param x X coordinate
+ * @param y Y coordinate
+ * @param width border width
+ * @param height border height
+ * @param bevelTaip values: BEVEL_UP or BEVEL_DOWN
+*)
+procedure drawBevel(x,y,width,height,bevelTaip : integer);
 
 implementation
 
@@ -125,6 +147,9 @@ begin
   fillChar(tileData^, 256*10*10, 0);
   textColor := 15;
   textSize := 11;
+  bevelColor := 7;
+  bevelDark := 8;
+  bevelLight := 15;
 end;
 procedure shutdownVGAUI;
 begin
@@ -530,4 +555,30 @@ begin
     end;*)
 end;
 
+procedure drawBorder(x,y,width,height,bevelTaip : integer);
+begin
+  if (bevelTaip = BEVEL_UP) then
+  begin
+    putHLine(x,y,width,bevelLight);
+    putVLine(x,y,height,bevelLight);
+    putHLine(x,y+height-1,width,bevelDark);
+    putVLine(x+width-1,y,height,bevelDark);
+    putPixel(x+width-1,y,bevelColor);
+    putPixel(x,y+height-1,bevelColor);
+  end
+  else
+  begin
+    putHLine(x,y,width,bevelDark);
+    putVLine(x,y,height,bevelDark);
+    putHLine(x,y+height-1,width,bevelLight);
+    putVLine(x+width-1,y,height,bevelLight);
+    putPixel(x+width-1,y,bevelColor);
+    putPixel(x,y+height-1,bevelColor);
+  end;
+end;
+procedure drawBevel(x,y,width,height,bevelTaip : integer);
+begin
+  putBar(x,y,width,height,bevelColor);
+  drawBorder(x,y,width,height,bevelTaip);
+end;
 end.

@@ -31,6 +31,11 @@ var
     tank : array[1..2] of ^TankType;
     bullet : ^TankType;
     enemy : array[1..MAX_ENEMY] of ^TankType;
+    score : integer;
+    wave : integer;
+    lairs : integer;
+    safetyTimer : integer;
+    enemyCalculator : integer;
 
 procedure randomTerrainType(tileIndex,rtiles : byte; fields,amount : integer);
 var i,j,k,n : integer;
@@ -98,7 +103,7 @@ begin
   begin
     for j := 0 to 99 do
     begin
-      if (map^.map[i,j] = 15) and (random(10) = 0) then
+      if (map^.map[i,j] = 15) and (random(20) = 0) then
       begin
         index := getFreeEnemyIndex;
         if (index <> -1) then
@@ -114,6 +119,7 @@ end;
 procedure animMap;
 var i,j : integer;
 begin
+  lairs := 0;
   for i := 0 to 149 do
   begin
     for j := 0 to 99 do
@@ -123,9 +129,35 @@ begin
       7 : map^.map[i,j] := 6;
       8 : map^.map[i,j] := 9;
       9 : map^.map[i,j] := 8;
+      15: inc(lairs);
       end;
     end;
   end;
+  enemyCalculator := 0;
+  for i := 1 to MAX_ENEMY do
+  begin
+    if (enemy[i]^.x > -1) then
+      inc(enemyCalculator);
+  end;
+end;
+procedure spawnEnemyLairs;
+var i,max : byte;
+    x,y : integer;
+begin
+  i := 0;
+  max := wave;
+  if (max > 15) then
+    max := 15;
+  repeat
+    x := random(130)+10;
+    y := random(85)+5;
+    if (map^.map[x,y] < 4) then
+    begin
+      map^.map[x,y] := 15;
+      inc(i);
+    end;
+  until i = max;
+  safetyTimer := 100;
 end;
 procedure randomMap;
 var i,j,k,n : integer;
@@ -175,16 +207,8 @@ begin
     end;
   until i = 1;
   (* Enemy bases *)
-  i := 0;
-  repeat
-    x := random(130)+10;
-    y := random(85)+5;
-    if (map^.map[x,y] < 4) then
-    begin
-      map^.map[x,y] := 15;
-      inc(i);
-    end;
-  until i = 5;
+  wave := 1;
+  spawnEnemyLairs;
 end;
 procedure cyclePalette;
 var i,r,g,b : byte;
@@ -228,11 +252,9 @@ begin
   end;
   for y := -size to size do
   begin
-    inc(j);
     i := 0;
     for x := -size to size do
     begin
-      inc(i);
       drawTile(dx+i*10,dy+j*10,map^.map[cx+x,cy+y]);
       for k := 1 to 2 do
       begin
@@ -283,7 +305,9 @@ begin
           drawSprite(dx+i*10,dy+j*10,73);
         end;
       end;
+    inc(i);
     end;
+    inc(j);
   end;
 end;
 function isBlocked(x,y : integer; taip : byte) : boolean;
@@ -302,7 +326,7 @@ begin
       end;
     if (taip = TYPE_ENEMY) then
       case map^.map[x,y] of
-      0..3 : isBlocked := false;
+      0..3,14 : isBlocked := false;
       4..15 : isBlocked := true;
       end;
   end
@@ -343,6 +367,7 @@ begin
          obj.x := x;
          obj.y := y;
          obj.shot := 6;
+         score := score + 25;
        end;
   else
   begin
@@ -353,71 +378,74 @@ begin
 end;
 procedure moveTank(var obj : TankType; direction : byte);
 begin
-  case direction of
-  DIR_UP: begin
-    if (obj.y > 0) and (isBlocked(obj.x,obj.y-1,obj.taip) = false) then
-    begin
-      obj.y := obj.y -1;
-      obj.dir := DIR_UP;
-    end
-    else
-    begin
-      if (obj.taip = TYPE_TANK) then
-        sound(50);
-      if (obj.taip = TYPE_BULLET) then
+  if (obj.x <> -1) then
+  begin
+    case direction of
+    DIR_UP: begin
+      if (obj.y > 0) and (isBlocked(obj.x,obj.y-1,obj.taip) = false) then
       begin
-        shootTerrain(obj,obj.x,obj.y-1);
+        obj.y := obj.y -1;
+        obj.dir := DIR_UP;
+      end
+      else
+      begin
+        if (obj.taip = TYPE_TANK) then
+          sound(50);
+        if (obj.taip = TYPE_BULLET) then
+        begin
+          shootTerrain(obj,obj.x,obj.y-1);
+        end;
       end;
     end;
-  end;
-  DIR_RIGHT: begin
-    if (obj.x < 149) and (isBlocked(obj.x+1,obj.y,obj.taip) = false) then
-    begin
-      obj.x := obj.x +1;
-      obj.dir := DIR_RIGHT;
-    end
-    else
-    begin
-      if (obj.taip = TYPE_TANK) then
-        sound(50);
-      if (obj.taip = TYPE_BULLET) then
+    DIR_RIGHT: begin
+      if (obj.x < 149) and (isBlocked(obj.x+1,obj.y,obj.taip) = false) then
       begin
-        shootTerrain(obj,obj.x+1,obj.y);
+        obj.x := obj.x +1;
+        obj.dir := DIR_RIGHT;
+      end
+      else
+      begin
+        if (obj.taip = TYPE_TANK) then
+          sound(50);
+        if (obj.taip = TYPE_BULLET) then
+        begin
+          shootTerrain(obj,obj.x+1,obj.y);
+        end;
       end;
     end;
-  end;
-  DIR_DOWN: begin
-    if (obj.y < 99) and (isBlocked(obj.x,obj.y+1,obj.taip) = false) then
-    begin
-      obj.y := obj.y +1;
-      obj.dir := DIR_DOWN;
-    end
-    else
-    begin
-      if (obj.taip = TYPE_TANK) then
-        sound(50);
-      if (obj.taip = TYPE_BULLET) then
+    DIR_DOWN: begin
+      if (obj.y < 99) and (isBlocked(obj.x,obj.y+1,obj.taip) = false) then
       begin
-        shootTerrain(obj,obj.x,obj.y+1);
+        obj.y := obj.y +1;
+        obj.dir := DIR_DOWN;
+      end
+      else
+      begin
+        if (obj.taip = TYPE_TANK) then
+          sound(50);
+        if (obj.taip = TYPE_BULLET) then
+        begin
+          shootTerrain(obj,obj.x,obj.y+1);
+        end;
       end;
     end;
-  end;
-  DIR_LEFT: begin
-    if (obj.x > 0) and (isBlocked(obj.x-1,obj.y,obj.taip) = false) then
-    begin
-      obj.x := obj.x -1;
-      obj.dir := DIR_LEFT;
-    end
-    else
-    begin
-      if (obj.taip = TYPE_TANK) then
-        sound(50);
-      if (obj.taip = TYPE_BULLET) then
+    DIR_LEFT: begin
+      if (obj.x > 0) and (isBlocked(obj.x-1,obj.y,obj.taip) = false) then
       begin
-        shootTerrain(obj,obj.x-1,obj.y);
+        obj.x := obj.x -1;
+        obj.dir := DIR_LEFT;
+      end
+      else
+      begin
+        if (obj.taip = TYPE_TANK) then
+          sound(50);
+        if (obj.taip = TYPE_BULLET) then
+        begin
+          shootTerrain(obj,obj.x-1,obj.y);
+        end;
       end;
     end;
-  end;
+    end;
   end;
 end;
 procedure handleBullet;
@@ -439,6 +467,7 @@ begin
     begin
       if (bullet^.x = enemy[i]^.x) and (bullet^.y = enemy[i]^.y) then
       begin
+        score := score + 5;
         enemy[i]^.x := -1;
         enemy[i]^.y := -1;
         bullet^.shot := 6;
@@ -494,12 +523,164 @@ begin
     end;
     moveTank(enemy[i]^,dir);
     enemy[i]^.dir := random(2);
+    if (enemy[i]^.x = base^.x) and (enemy[i]^.y = base^.y) then
+    begin
+      base^.x := -1;
+      base^.y := -1;
+      sound(880);
+    end;
+    if (enemy[i]^.x = tank[1]^.x) and (enemy[i]^.y = tank[1]^.y) then
+    begin
+      tank[1]^.x := -1;
+      tank[1]^.y := -1;
+      sound(440);
+    end;
+    if (enemy[i]^.x = tank[2]^.x) and (enemy[i]^.y = tank[2]^.y) then
+    begin
+      tank[2]^.x := -1;
+      tank[2]^.y := -1;
+      sound(440);
+    end;
+  end;
+end;
+procedure drawBackground;
+begin
+  drawBevel(0,0,320,200,BEVEL_UP);
+  drawBorder(14,19,92,92,BEVEL_DOWN);
+  drawBorder(114,19,92,92,BEVEL_DOWN);
+  drawBorder(214,19,92,92,BEVEL_DOWN);
+  setFont(cyberFont);
+  setColor(0);
+  putText(28,7,'THE BASE');
+  putText(30,7,'THE BASE');
+  putText(29,6,'THE BASE');
+  putText(29,8,'THE BASE');
+  putText(136,7,'TANK 1');
+  putText(138,7,'TANK 1');
+  putText(137,6,'TANK 1');
+  putText(137,8,'TANK 1');
+  putText(235,7,'TANK 2');
+  putText(237,7,'TANK 2');
+  putText(236,6,'TANK 2');
+  putText(236,8,'TANK 2');
+  setColor(2);
+  putText(29,7,'THE BASE');
+  putText(137,7,'TANK 1');
+  putText(236,7,'TANK 2');
+  setColor(0);
+  putText(15,120,'SCORE');
+  putText(17,120,'SCORE');
+  putText(16,119,'SCORE');
+  putText(16,121,'SCORE');
+  drawBorder(70,119,70,12,BEVEL_DOWN);
+  putText(15,133,'LAIRS');
+  putText(17,133,'LAIRS');
+  putText(16,132,'LAIRS');
+  putText(16,134,'LAIRS');
+  drawBorder(70,132,70,12,BEVEL_DOWN);
+  putText(15,146,'WAVE');
+  putText(17,146,'WAVE');
+  putText(16,145,'WAVE');
+  putText(16,147,'WAVE');
+  drawBorder(70,145,70,12,BEVEL_DOWN);
+  putText(15,159,'THREAT');
+  putText(17,159,'THREAT');
+  putText(16,158,'THREAT');
+  putText(16,160,'THREAT');
+  drawBorder(70,158,70,12,BEVEL_DOWN);
+  setColor(3);
+  putText(16,120,'SCORE');
+  setColor(4);
+  putText(16,133,'LAIRS');
+  setColor(2);
+  putText(16,146,'WAVE');
+  setColor(5);
+  putText(16,159,'THREAT');
+end;
+procedure drawStats;
+var s : string;
+begin
+  putBar(71,120,68,10,0);
+  setColor(3);
+  str(score, s);
+  putText(72,120,s);
+  putBar(71,133,68,10,0);
+  setColor(12);
+  str(lairs, s);
+  putText(72,133,s);
+  putBar(71,146,68,10,0);
+  setColor(13);
+  str(wave, s);
+  putText(72,146,s);
+  putBar(71,159,68,10,0);
+  case enemyCalculator of
+  0: begin s := 'NONE'; setcolor(7); end;
+  1..5: begin s := 'MINIMAL'; setColor(15); end;
+  5..10: begin s := 'LOW'; setColor(11); end;
+  10..20: begin s := 'MEDIUM'; setColor(14); end;
+  20..25: begin s := 'HIGH'; setColor(12); end;
+  25..30: begin s := 'DANGER'; setColor(4); end;
+  end;
+  putText(72,159,s);
+end;
+procedure drawFullMap;
+var x,y,offX,offY : integer;
+    color : byte;
+begin
+  readyDraw;
+  drawBevel(0,0,320,200,BEVEL_UP);
+  drawBorder(9,49,302,102,BEVEL_DOWN);
+  setColor(0);
+  putText(94,30,'THE TACTICAL MAP');
+  putText(96,30,'THE TACTICAL MAP');
+  putText(95,29,'THE TACTICAL MAP');
+  putText(95,31,'THE TACTICAL MAP');
+  setColor(9);
+  putText(95,30,'THE TACTICAL MAP');
+  offX := 10;
+  offY := 50;
+  for x := 0 to 149 do
+  begin
+    for y := 0 to 99 do
+    begin
+      case map^.map[x,y] of
+      0,1: color := 6;
+      2,3: color := 2;
+      4,5: color := 8;
+      6,7: color := 1;
+      8,9: color := 4;
+      10: color := 10;
+      11: color := 7;
+      14: color := 15;
+      15: color := 12;
+      end;
+      putPixel(offX+x*2,offY+y,color);
+      putPixel(offX+x*2+1,offY+y,color);
+    end;
+  end;
+  doneDraw;
+  nosound;
+  readkey;
+end;
+procedure warningSoundLoop;
+begin
+  case safetyTimer of
+  16,14,12,10,8,6,4,2 : sound(440);
+  15,13,11,9,7,5,4,3,1 : sound(880);
+  21: sound(1300);
+  20: sound(1200);
+  19: sound(1100);
+  18: sound(1000);
+  17: sound(900);
+  100,90,80,70,60,50,40,30: sound(220);
+  else
+    nosound;
   end;
 end;
 procedure mainLoop;
 var ch : char;
     x, y,i : integer;
-    timer : byte;
+    timer, halfTime : byte;
 begin
   bullet^.x := -1;
   bullet^.y := -1;
@@ -515,18 +696,24 @@ begin
     enemy[i]^.taip := TYPE_ENEMY;
   end;
   timer := 0;
+  halfTime := 0;
+  score := 0;
+  readyDraw;
+  clearBuffer(0);
+  drawBackground;
   repeat
     inc(timer);
-    if (timer = 1) then
+    if (timer = 1) and (halfTime = 2) then
     begin
-      spawnEnemy;
+      if (safetyTimer = 0) then
+        spawnEnemy;
       handleEnemy(1,10);
     end;
-    if (timer = 4) then
+    if (timer = 4) and (halfTime = 2) then
     begin
       handleEnemy(11,20);
     end;
-    if (timer = 8) then
+    if (timer = 8) and (halfTime = 2) then
     begin
       handleEnemy(21,30);
     end;
@@ -536,19 +723,63 @@ begin
     end;
     if (timer = 10) then
     begin
+      inc(halfTime);
+      if (halfTime = 3) then
+        halfTime := 0;
       animMap;
+      if (lairs = 0) then
+      begin
+        inc(wave);
+        score := score + wave*100;
+        spawnEnemyLairs;
+      end;
       cyclePalette;
       timer := 0;
       handleTank(1);
       handleTank(2);
-      if (tank[1]^.shot = 0) and (tank[2]^.shot = 0) then
+      if (safetyTimer > 0) then
+      begin
+        warningSoundLoop;
+        dec(safetyTimer);
+      end;
+      if (tank[1]^.shot = 0) and (tank[2]^.shot = 0) and (safetyTimer = 0) then
         nosound;
     end;
     readyDraw;
-    clearBuffer(0);
-    drawMap(base^.x,base^.y,4,10,10);
-    drawMap(tank[1]^.x,tank[1]^.y,4,110,10);
-    drawMap(tank[2]^.x,tank[2]^.y,4,210,10);
+    if (base^.x > -1) then
+    begin
+      drawMap(base^.x,base^.y,4,15,20);
+    end
+    else
+    begin
+      putBar(15,20,90,90,0);
+      setColor(12);
+      putText(20,40,'CONNECTION');
+      putText(20,48,'   LOST!');
+    end;
+    if (tank[1]^.x > -1) then
+    begin
+      drawMap(tank[1]^.x,tank[1]^.y,4,115,20);
+    end
+    else
+    begin
+      putBar(115,20,90,90,0);
+      setColor(12);
+      putText(120,40,'CONNECTION');
+      putText(120,48,'   LOST!');
+    end;
+    if (tank[2]^.x > -1) then
+    begin
+      drawMap(tank[2]^.x,tank[2]^.y,4,215,20);
+    end
+    else
+    begin
+      putBar(215,20,90,90,0);
+      setColor(12);
+      putText(220,40,'CONNECTION');
+      putText(220,48,'   LOST!');
+    end;
+    drawStats;
     doneDraw;
     if (keypressed) then
     begin
@@ -560,8 +791,13 @@ begin
       #75: moveTank(tank[ti]^, DIR_LEFT);
       #77: moveTank(tank[ti]^, DIR_RIGHT);
       #80: moveTank(tank[ti]^, DIR_DOWN);
+      'm': begin
+             drawFullMap;
+             readyDraw;
+             drawBackground;
+           end;
       ' ': begin
-             if (tank[ti]^.load = 0) then
+             if (tank[ti]^.load = 0) and (tank[ti]^.x > -1) then
              begin
                sound(200);
                tank[ti]^.shot := 5;
