@@ -502,44 +502,59 @@ begin
   begin
     if (enemy[i]^.x <> -1) then
     begin
-      mx := base^.x - enemy[i]^.x;
-      my := base^.y - enemy[i]^.y;
-    end;
-    move := random(3);
-    dir := random(4);
-    if (move = 0) then
-    begin
-      if (mx < 0) then
-        dir := DIR_LEFT;
-      if (mx > 0) then
-        dir := DIR_RIGHT;
-    end;
-    if (move = 1) then
-    begin
-      if (my < 0) then
-        dir := DIR_UP;
-      if (my > 0) then
-        dir := DIR_DOWN;
-    end;
-    moveTank(enemy[i]^,dir);
-    enemy[i]^.dir := random(2);
-    if (enemy[i]^.x = base^.x) and (enemy[i]^.y = base^.y) then
-    begin
-      base^.x := -1;
-      base^.y := -1;
-      sound(880);
-    end;
-    if (enemy[i]^.x = tank[1]^.x) and (enemy[i]^.y = tank[1]^.y) then
-    begin
-      tank[1]^.x := -1;
-      tank[1]^.y := -1;
-      sound(440);
-    end;
-    if (enemy[i]^.x = tank[2]^.x) and (enemy[i]^.y = tank[2]^.y) then
-    begin
-      tank[2]^.x := -1;
-      tank[2]^.y := -1;
-      sound(440);
+      if (base^.x <> -1) then
+      begin
+        mx := base^.x - enemy[i]^.x;
+        my := base^.y - enemy[i]^.y;
+      end
+      else if (tank[1]^.x <> -1) then
+      begin
+        mx := tank[1]^.x - enemy[i]^.x;
+        my := tank[1]^.y - enemy[i]^.y;
+      end
+      else
+      begin
+        mx := tank[2]^.x - enemy[i]^.x;
+        my := tank[2]^.y - enemy[i]^.y;
+      end;
+      move := random(3);
+      dir := random(4);
+      if (move = 0) then
+      begin
+        if (mx < 0) then
+          dir := DIR_LEFT;
+        if (mx > 0) then
+          dir := DIR_RIGHT;
+      end;
+      if (move = 1) then
+      begin
+        if (my < 0) then
+          dir := DIR_UP;
+        if (my > 0) then
+          dir := DIR_DOWN;
+      end;
+      moveTank(enemy[i]^,dir);
+      enemy[i]^.dir := random(2);
+      if (enemy[i]^.x = base^.x) and (enemy[i]^.y = base^.y) then
+      begin
+        base^.x := -1;
+        base^.y := -1;
+        sound(880);
+      end;
+      if (enemy[i]^.x = tank[1]^.x) and (enemy[i]^.y = tank[1]^.y) then
+      begin
+        tank[1]^.x := -1;
+        tank[1]^.y := -1;
+        tank[1]^.shot := 6;
+        sound(440);
+      end;
+      if (enemy[i]^.x = tank[2]^.x) and (enemy[i]^.y = tank[2]^.y) then
+      begin
+        tank[2]^.x := -1;
+        tank[2]^.y := -1;
+        tank[2]^.shot := 6;
+        sound(440);
+      end;
     end;
   end;
 end;
