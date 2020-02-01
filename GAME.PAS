@@ -340,39 +340,63 @@ begin
   case map^.map[x, y] of
   4 : begin
         map^.map[x, y] := 5;
-        obj.x := x;
-        obj.y := y;
-        obj.shot := 6;
+        if (obj.taip = TYPE_BULLET) then
+        begin
+          obj.x := x;
+          obj.y := y;
+          obj.shot := 6;
+        end;
       end;
   5 : begin
         map^.map[x, y] := 1;
-        obj.x := x;
-        obj.y := y;
-        obj.shot := 6;
+        if (obj.taip = TYPE_BULLET) then
+        begin
+          obj.x := x;
+          obj.y := y;
+          obj.shot := 6;
+        end;
   end;
+  6,7 : begin
+        if (obj.taip = TYPE_ENEMY) then
+        begin
+          map^.map[x,y] := 0;
+        end;
+      end;
   10 : begin
          map^.map[x, y] := 1;
-         obj.x := x;
-         obj.y := y;
-         obj.shot := 6;
+         if (obj.taip = TYPE_BULLET) then
+         begin
+           obj.x := x;
+           obj.y := y;
+           obj.shot := 6;
+         end;
   end;
   11 : begin
          map^.map[x, y] := 4;
-         obj.x := x;
-         obj.y := y;
-         obj.shot := 6;
+         if (obj.taip = TYPE_BULLET) then
+         begin
+           obj.x := x;
+           obj.y := y;
+           obj.shot := 6;
+         end;
        end;
   15 : begin
-         map^.map[x, y] := 5;
-         obj.x := x;
-         obj.y := y;
-         obj.shot := 6;
-         score := score + 25;
+         if (obj.taip = TYPE_BULLET) then
+         begin
+           map^.map[x, y] := 5;
+           obj.x := x;
+           obj.y := y;
+           obj.shot := 6;
+           score := score + 25;
+         end;
        end;
   else
   begin
-    obj.x := -1;
-    obj.y := -1;
+    if (obj.taip = TYPE_BULLET) then
+    begin
+      obj.x := -1;
+      obj.y := -1;
+    end;
   end;
   end;
 end;
@@ -391,7 +415,7 @@ begin
       begin
         if (obj.taip = TYPE_TANK) then
           sound(50);
-        if (obj.taip = TYPE_BULLET) then
+        if (obj.taip = TYPE_BULLET) or (obj.taip = TYPE_ENEMY) then
         begin
           shootTerrain(obj,obj.x,obj.y-1);
         end;
@@ -407,7 +431,7 @@ begin
       begin
         if (obj.taip = TYPE_TANK) then
           sound(50);
-        if (obj.taip = TYPE_BULLET) then
+        if (obj.taip = TYPE_BULLET) or (obj.taip = TYPE_ENEMY) then
         begin
           shootTerrain(obj,obj.x+1,obj.y);
         end;
@@ -423,7 +447,7 @@ begin
       begin
         if (obj.taip = TYPE_TANK) then
           sound(50);
-        if (obj.taip = TYPE_BULLET) then
+        if (obj.taip = TYPE_BULLET) or (obj.taip = TYPE_ENEMY) then
         begin
           shootTerrain(obj,obj.x,obj.y+1);
         end;
@@ -439,7 +463,7 @@ begin
       begin
         if (obj.taip = TYPE_TANK) then
           sound(50);
-        if (obj.taip = TYPE_BULLET) then
+        if (obj.taip = TYPE_BULLET) or (obj.taip = TYPE_ENEMY) then
         begin
           shootTerrain(obj,obj.x-1,obj.y);
         end;
